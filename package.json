@@ -5,6 +5,11 @@
   "type": "module",
   "description": "A command-line SVG editor for Software Design Project 1.",
   "scripts": {
-    "cli": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/index.ts"
+    "cli": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
   }
 }
