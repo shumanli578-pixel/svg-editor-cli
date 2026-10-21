@@ -1,7 +1,15 @@
 import { createInterface } from "node:readline";
 import { CommandManager } from "./commands/CommandManager.ts";
+import { AddToCommand } from "./commands/AddToCommand.ts";
+import { BackCommand } from "./commands/BackCommand.ts";
 import { CreateCommand } from "./commands/CreateCommand.ts";
+import { DeleteCommand } from "./commands/DeleteCommand.ts";
+import { FrontCommand } from "./commands/FrontCommand.ts";
+import { GroupCommand } from "./commands/GroupCommand.ts";
 import { MoveCommand } from "./commands/MoveCommand.ts";
+import { ScaleCommand } from "./commands/ScaleCommand.ts";
+import { SetCommand } from "./commands/SetCommand.ts";
+import { UngroupCommand } from "./commands/UngroupCommand.ts";
 import { ShapeFactory } from "./model/ShapeFactory.ts";
 import { SvgDocument } from "./model/SvgDocument.ts";
 
@@ -75,6 +83,33 @@ function execute(args: string[]): boolean {
     case "move":
       moveShape(args.slice(1));
       return false;
+    case "scale":
+      scaleShape(args.slice(1));
+      return false;
+    case "set":
+      setAttribute(args.slice(1));
+      return false;
+    case "group":
+      groupShapes(args.slice(1));
+      return false;
+    case "delete":
+      deleteShape(args.slice(1));
+      return false;
+    case "ungroup":
+      ungroupShape(args.slice(1));
+      return false;
+    case "addto":
+      addToGroup(args.slice(1));
+      return false;
+    case "front":
+      changeZOrder(args.slice(1), "front");
+      return false;
+    case "back":
+      changeZOrder(args.slice(1), "back");
+      return false;
+    case "show":
+      showShape(args.slice(1));
+      return false;
     case "undo":
       requireNoArguments(command, args);
       requireDocument().manager.undo();
@@ -86,8 +121,8 @@ function execute(args: string[]): boolean {
       console.log("redid last command");
       return false;
     case "tree":
-      requireNoArguments(command, args);
-      console.log(requireDocument().document.treeLines().join("\n"));
+      if (args.length > 2) throw new Error("usage: tree [id]");
+      console.log(requireDocument().document.treeLines(args[1]).join("\n"));
       return false;
     default:
       throw new Error(`unknown command: ${args[0]}`);
@@ -110,15 +145,19 @@ function initialize(args: string[]): void {
 
 function createShape(args: string[]): void {
   if (args.length < 2) throw new Error("usage: create <type> <id> [params...]");
-  const [type, id, ...params] = args;
-  if (type !== "rect" && type !== "circle" && type !== "line") {
-    throw new Error(`unknown shape type: ${type}`);
+  const [rawType, id, ...rawParams] = args;
+  const type = rawType.toLowerCase();
+  let parentId: string | undefined;
+  let params = rawParams;
+  if (rawParams.length >= 2 && rawParams[rawParams.length - 2].toLowerCase() === "in") {
+    parentId = rawParams.at(-1);
+    params = rawParams.slice(0, -2);
   }
 
   const current = requireDocument();
   const shape = shapeFactory.create(type, id, params);
-  current.manager.execute(new CreateCommand(current.document, shape));
-  console.log(`${shape.kind}#${shape.id} created`);
+  current.manager.execute(new CreateCommand(current.document, shape, parentId));
+  console.log(`${shape.kind}#${shape.id} created${parentId ? ` in g#${parentId}` : ""}`);
 }
 
 function moveShape(args: string[]): void {
@@ -132,6 +171,76 @@ function moveShape(args: string[]): void {
 
   current.manager.execute(new MoveCommand(current.document, id, dx, dy));
   console.log(`${shape.kind}#${shape.id} moved by (${dx},${dy})`);
+}
+
+function scaleShape(args: string[]): void {
+  if (args.length !== 2) throw new Error("usage: scale <id> <factor>");
+  const [id, rawFactor] = args;
+  const factor = parseNumber(rawFactor, "factor");
+  const current = requireDocument();
+  const shape = current.document.resolve(id);
+  if (!shape) throw new Error(`no such shape: ${id}`);
+  current.manager.execute(new ScaleCommand(current.document, id, factor));
+  console.log(`${shape.kind}#${id} scaled by ${factor}`);
+}
+
+function setAttribute(args: string[]): void {
+  if (args.length !== 3) throw new Error("usage: set <id> <attr> <value>");
+  const [id, attribute, value] = args;
+  const current = requireDocument();
+  const shape = current.document.resolve(id);
+  if (!shape) throw new Error(`no such shape: ${id}`);
+  current.manager.execute(new SetCommand(current.document, id, attribute, value));
+  console.log(`${shape.kind}#${id} updated: ${attribute}=${JSON.stringify(value)}`);
+}
+
+function groupShapes(args: string[]): void {
+  if (args.length < 3) throw new Error("usage: group <newGid> <id1> <id2>...");
+  const [groupId, ...shapeIds] = args;
+  const current = requireDocument();
+  current.manager.execute(new GroupCommand(current.document, groupId, shapeIds));
+  console.log(`g#${groupId} created with ${shapeIds.length} children`);
+}
+
+function deleteShape(args: string[]): void {
+  if (args.length !== 1) throw new Error("usage: delete <id>");
+  const current = requireDocument();
+  const shape = current.document.resolve(args[0]);
+  if (!shape) throw new Error(`no such shape: ${args[0]}`);
+  current.manager.execute(new DeleteCommand(current.document, args[0]));
+  console.log(`${shape.kind}#${shape.id} deleted`);
+}
+
+function ungroupShape(args: string[]): void {
+  if (args.length !== 1) throw new Error("usage: ungroup <gid>");
+  const current = requireDocument();
+  current.manager.execute(new UngroupCommand(current.document, args[0]));
+  console.log(`g#${args[0]} ungrouped`);
+}
+
+function addToGroup(args: string[]): void {
+  if (args.length !== 2) throw new Error("usage: addto <gid> <id>");
+  const [groupId, shapeId] = args;
+  const current = requireDocument();
+  current.manager.execute(new AddToCommand(current.document, groupId, shapeId));
+  console.log(`${shapeId} moved into g#${groupId}`);
+}
+
+function changeZOrder(args: string[], position: "front" | "back"): void {
+  if (args.length !== 1) throw new Error(`usage: ${position} <id>`);
+  const current = requireDocument();
+  const shape = current.document.resolve(args[0]);
+  if (!shape) throw new Error(`no such shape: ${args[0]}`);
+  const command = position === "front"
+    ? new FrontCommand(current.document, args[0])
+    : new BackCommand(current.document, args[0]);
+  current.manager.execute(command);
+  console.log(`${shape.kind}#${shape.id} moved to ${position}`);
+}
+
+function showShape(args: string[]): void {
+  if (args.length !== 1) throw new Error("usage: show <id>");
+  console.log(requireDocument().document.showLines(args[0]).join("\n"));
 }
 
 function requireDocument(): { document: SvgDocument; manager: CommandManager } {
@@ -196,9 +305,21 @@ function printHelp(): void {
   console.log("  init [w] [h]                         create a canvas (default 800x600)");
   console.log("  create rect <id> <x> <y> <w> <h> [fill]");
   console.log("  create circle <id> <cx> <cy> <r> [fill]");
+  console.log("  create ellipse <id> <cx> <cy> <rx> <ry> [fill]");
   console.log("  create line <id> <x1> <y1> <x2> <y2> [stroke]");
+  console.log('  create text <id> <x> <y> "content"');
+  console.log("  create g <id>");
+  console.log("  create ... in <containerId>       create inside a group");
   console.log("  move <id> <dx> <dy>                  move a shape by an offset");
-  console.log("  tree                                 show the document structure");
+  console.log("  scale <id> <factor>                  scale a shape or group");
+  console.log("  set <id> <attr> <value>              change an attribute");
+  console.log("  group <newGid> <id1> <id2>...        group existing shapes");
+  console.log("  ungroup <gid>                        dissolve a nested group");
+  console.log("  addto <gid> <id>                     move a shape into a group");
+  console.log("  delete <id>                          delete a shape or subtree");
+  console.log("  front <id> | back <id>               change sibling draw order");
+  console.log("  show <id>                            show one shape's attributes");
+  console.log("  tree [id]                            show the document structure");
   console.log("  undo | redo                          undo or redo an edit");
   console.log("  help                                 show this help");
   console.log("  exit                                 quit the editor");

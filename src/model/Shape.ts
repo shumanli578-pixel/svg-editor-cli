@@ -48,6 +48,17 @@ export abstract class Shape {
     }
   }
 
+  removeAttribute(name: string): void {
+    if (name === "fill" || name === "stroke" || name === "stroke-width") {
+      this.style.delete(name);
+      return;
+    }
+    if (this.getGeometryAttribute(name) === undefined) {
+      throw new Error(`unknown attribute: ${name}`);
+    }
+    throw new Error(`attribute cannot be removed: ${name}`);
+  }
+
   protected abstract moveGeometry(dx: number, dy: number): void;
   protected abstract scaleGeometry(factor: number): void;
   protected abstract getGeometryAttribute(name: string): string | undefined;
