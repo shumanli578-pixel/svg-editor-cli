@@ -1,0 +1,10 @@
+{
+  "name": "svg-editor-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A command-line SVG editor for Software Design Project 1.",
+  "scripts": {
+    "cli": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/index.ts"
+  }
+}
