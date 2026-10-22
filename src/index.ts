@@ -12,11 +12,16 @@ import { SetCommand } from "./commands/SetCommand.ts";
 import { UngroupCommand } from "./commands/UngroupCommand.ts";
 import { ShapeFactory } from "./model/ShapeFactory.ts";
 import { SvgDocument } from "./model/SvgDocument.ts";
+import { SvgIO } from "./io/SvgIO.ts";
+import type { Command } from "./commands/Command.ts";
 
 const prompt = "svg> ";
 const shapeFactory = new ShapeFactory();
+const svgIO = new SvgIO();
 let document: SvgDocument | null = null;
 let commandManager = new CommandManager();
+let lastReadPath: string | null = null;
+let undoBlockedByIO = false;
 
 console.log("svg-editor 0.1 — type 'help' for commands");
 
@@ -77,6 +82,15 @@ function execute(args: string[]): boolean {
     case "init":
       initialize(args.slice(1));
       return false;
+    case "read":
+      readDocument(args.slice(1));
+      return false;
+    case "save":
+      saveDocument(args.slice(1));
+      return false;
+    case "canvas":
+      canvasCommand(args.slice(1));
+      return false;
     case "create":
       createShape(args.slice(1));
       return false;
@@ -112,11 +126,13 @@ function execute(args: string[]): boolean {
       return false;
     case "undo":
       requireNoArguments(command, args);
+      ensureUndoAllowed();
       requireDocument().manager.undo();
       console.log("undid last command");
       return false;
     case "redo":
       requireNoArguments(command, args);
+      ensureUndoAllowed();
       requireDocument().manager.redo();
       console.log("redid last command");
       return false;
@@ -140,7 +156,45 @@ function initialize(args: string[]): void {
   const nextDocument = new SvgDocument(width, height);
   document = nextDocument;
   commandManager = new CommandManager();
+  lastReadPath = null;
+  undoBlockedByIO = true;
   console.log(`canvas ${width}x${height} created`);
+}
+
+function readDocument(args: string[]): void {
+  if (args.length !== 1) throw new Error("usage: read <file.svg>");
+  const result = svgIO.read(args[0]);
+  for (const warning of result.warnings) console.log(warning);
+  document = result.document;
+  commandManager = new CommandManager();
+  lastReadPath = result.path;
+  undoBlockedByIO = true;
+  console.log(`read ${args[0]} (${result.document.elementCount} elements)`);
+}
+
+function saveDocument(args: string[]): void {
+  if (args.length > 1) throw new Error("usage: save [file.svg]");
+  const current = requireDocument();
+  const targetPath = args[0] ?? lastReadPath;
+  if (!targetPath) throw new Error("no read path. use 'save <file.svg>' or read a file first");
+  svgIO.save(current.document, targetPath);
+  undoBlockedByIO = true;
+  console.log(`saved to ${targetPath} (${current.document.elementCount} elements)`);
+}
+
+function canvasCommand(args: string[]): void {
+  if (args.length !== 0 && args.length !== 2) throw new Error("usage: canvas [w] [h]");
+  const current = requireDocument();
+  if (args.length === 0) {
+    console.log(`canvas ${current.document.width}x${current.document.height}`);
+    return;
+  }
+
+  const width = parseNumber(args[0], "width");
+  const height = parseNumber(args[1], "height");
+  current.document.resize(width, height);
+  undoBlockedByIO = true;
+  console.log(`canvas resized to ${width}x${height}`);
 }
 
 function createShape(args: string[]): void {
@@ -156,7 +210,7 @@ function createShape(args: string[]): void {
 
   const current = requireDocument();
   const shape = shapeFactory.create(type, id, params);
-  current.manager.execute(new CreateCommand(current.document, shape, parentId));
+  runEdit(current.manager, new CreateCommand(current.document, shape, parentId));
   console.log(`${shape.kind}#${shape.id} created${parentId ? ` in g#${parentId}` : ""}`);
 }
 
@@ -169,7 +223,7 @@ function moveShape(args: string[]): void {
   const shape = current.document.resolve(id);
   if (!shape) throw new Error(`no such shape: ${id}`);
 
-  current.manager.execute(new MoveCommand(current.document, id, dx, dy));
+  runEdit(current.manager, new MoveCommand(current.document, id, dx, dy));
   console.log(`${shape.kind}#${shape.id} moved by (${dx},${dy})`);
 }
 
@@ -180,7 +234,7 @@ function scaleShape(args: string[]): void {
   const current = requireDocument();
   const shape = current.document.resolve(id);
   if (!shape) throw new Error(`no such shape: ${id}`);
-  current.manager.execute(new ScaleCommand(current.document, id, factor));
+  runEdit(current.manager, new ScaleCommand(current.document, id, factor));
   console.log(`${shape.kind}#${id} scaled by ${factor}`);
 }
 
@@ -190,7 +244,7 @@ function setAttribute(args: string[]): void {
   const current = requireDocument();
   const shape = current.document.resolve(id);
   if (!shape) throw new Error(`no such shape: ${id}`);
-  current.manager.execute(new SetCommand(current.document, id, attribute, value));
+  runEdit(current.manager, new SetCommand(current.document, id, attribute, value));
   console.log(`${shape.kind}#${id} updated: ${attribute}=${JSON.stringify(value)}`);
 }
 
@@ -198,7 +252,7 @@ function groupShapes(args: string[]): void {
   if (args.length < 3) throw new Error("usage: group <newGid> <id1> <id2>...");
   const [groupId, ...shapeIds] = args;
   const current = requireDocument();
-  current.manager.execute(new GroupCommand(current.document, groupId, shapeIds));
+  runEdit(current.manager, new GroupCommand(current.document, groupId, shapeIds));
   console.log(`g#${groupId} created with ${shapeIds.length} children`);
 }
 
@@ -207,14 +261,14 @@ function deleteShape(args: string[]): void {
   const current = requireDocument();
   const shape = current.document.resolve(args[0]);
   if (!shape) throw new Error(`no such shape: ${args[0]}`);
-  current.manager.execute(new DeleteCommand(current.document, args[0]));
+  runEdit(current.manager, new DeleteCommand(current.document, args[0]));
   console.log(`${shape.kind}#${shape.id} deleted`);
 }
 
 function ungroupShape(args: string[]): void {
   if (args.length !== 1) throw new Error("usage: ungroup <gid>");
   const current = requireDocument();
-  current.manager.execute(new UngroupCommand(current.document, args[0]));
+  runEdit(current.manager, new UngroupCommand(current.document, args[0]));
   console.log(`g#${args[0]} ungrouped`);
 }
 
@@ -222,7 +276,7 @@ function addToGroup(args: string[]): void {
   if (args.length !== 2) throw new Error("usage: addto <gid> <id>");
   const [groupId, shapeId] = args;
   const current = requireDocument();
-  current.manager.execute(new AddToCommand(current.document, groupId, shapeId));
+  runEdit(current.manager, new AddToCommand(current.document, groupId, shapeId));
   console.log(`${shapeId} moved into g#${groupId}`);
 }
 
@@ -234,7 +288,7 @@ function changeZOrder(args: string[], position: "front" | "back"): void {
   const command = position === "front"
     ? new FrontCommand(current.document, args[0])
     : new BackCommand(current.document, args[0]);
-  current.manager.execute(command);
+  runEdit(current.manager, command);
   console.log(`${shape.kind}#${shape.id} moved to ${position}`);
 }
 
@@ -246,6 +300,15 @@ function showShape(args: string[]): void {
 function requireDocument(): { document: SvgDocument; manager: CommandManager } {
   if (!document) throw new Error("no document. use 'init' first");
   return { document, manager: commandManager };
+}
+
+function runEdit(manager: CommandManager, command: Command): void {
+  manager.execute(command);
+  undoBlockedByIO = false;
+}
+
+function ensureUndoAllowed(): void {
+  if (undoBlockedByIO) throw new Error("undo not allowed after io command");
 }
 
 function requireNoArguments(command: string, args: string[]): void {
@@ -303,6 +366,9 @@ function tokenize(line: string): string[] {
 function printHelp(): void {
   console.log("Commands:");
   console.log("  init [w] [h]                         create a canvas (default 800x600)");
+  console.log("  read <file.svg>                      read an SVG file");
+  console.log("  save [file.svg]                      save the current SVG document");
+  console.log("  canvas [w] [h]                       show or resize the canvas");
   console.log("  create rect <id> <x> <y> <w> <h> [fill]");
   console.log("  create circle <id> <cx> <cy> <r> [fill]");
   console.log("  create ellipse <id> <cx> <cy> <rx> <ry> [fill]");
