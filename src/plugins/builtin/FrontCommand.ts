@@ -1,7 +1,7 @@
-import type { SvgDocument, ShapeLocation } from "../model/SvgDocument.ts";
-import type { Command } from "./Command.ts";
+import type { SvgDocument, ShapeLocation } from "../../model/SvgDocument.ts";
+import type { Command } from "../../commands/Command.ts";
 
-export class BackCommand implements Command {
+export class FrontCommand implements Command {
   private readonly document: SvgDocument;
   private readonly shapeId: string;
   private originalLocation: ShapeLocation | undefined;
@@ -13,11 +13,11 @@ export class BackCommand implements Command {
 
   execute(): void {
     this.originalLocation ??= this.document.location(this.shapeId);
-    this.document.setZOrder(this.shapeId, "back");
+    this.document.setZOrder(this.shapeId, "front");
   }
 
   undo(): void {
-    if (!this.originalLocation) throw new Error("cannot undo a back command that has not executed");
+    if (!this.originalLocation) throw new Error("cannot undo a front command that has not executed");
     this.document.moveTo(this.shapeId, this.originalLocation.parent?.id ?? null, this.originalLocation.index);
   }
 }

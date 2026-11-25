@@ -1,6 +1,6 @@
-import { Group } from "../plugins/builtin/Group.ts";
-import type { SvgDocument, ShapeLocation } from "../model/SvgDocument.ts";
-import type { Command } from "./Command.ts";
+import { Group } from "./Group.ts";
+import type { SvgDocument, ShapeLocation } from "../../model/SvgDocument.ts";
+import type { Command } from "../../commands/Command.ts";
 
 export class GroupCommand implements Command {
   private readonly document: SvgDocument;

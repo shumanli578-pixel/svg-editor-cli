@@ -1,5 +1,5 @@
-import type { SvgDocument } from "../model/SvgDocument.ts";
-import type { Command } from "./Command.ts";
+import type { SvgDocument } from "../../model/SvgDocument.ts";
+import type { Command } from "../../commands/Command.ts";
 
 export class MoveCommand implements Command {
   private readonly document: SvgDocument;

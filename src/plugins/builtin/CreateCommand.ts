@@ -1,6 +1,6 @@
-import type { SvgDocument } from "../model/SvgDocument.ts";
-import type { Shape } from "../model/Shape.ts";
-import type { Command } from "./Command.ts";
+import type { SvgDocument } from "../../model/SvgDocument.ts";
+import type { Shape } from "../../model/Shape.ts";
+import type { Command } from "../../commands/Command.ts";
 
 export class CreateCommand implements Command {
   private created = false;
