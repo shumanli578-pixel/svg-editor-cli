@@ -11,13 +11,15 @@ import { ScaleCommand } from "./commands/ScaleCommand.ts";
 import { SetCommand } from "./commands/SetCommand.ts";
 import { UngroupCommand } from "./commands/UngroupCommand.ts";
 import { ShapeFactory } from "./model/ShapeFactory.ts";
+import { createDefaultSetup } from "./composition/DefaultSetup.ts";
 import { SvgDocument } from "./model/SvgDocument.ts";
 import { SvgIO } from "./io/SvgIO.ts";
 import type { Command } from "./commands/Command.ts";
 
 const prompt = "svg> ";
-const shapeFactory = new ShapeFactory();
-const svgIO = new SvgIO();
+const setup = createDefaultSetup();
+const shapeFactory = new ShapeFactory(setup.registry);
+const svgIO = new SvgIO(shapeFactory);
 let document: SvgDocument | null = null;
 let commandManager = new CommandManager();
 let lastReadPath: string | null = null;
