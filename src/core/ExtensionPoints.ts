@@ -1,7 +1,7 @@
 /** Creates one shape type. */
 export interface ShapeProvider {
-  readonly name: string;
-  create(id: string, params: string[]): unknown;
+  readonly type: string;
+  create(id: string, params: string[]): import("../model/Shape.ts").Shape;
 }
 
 /** Handles one CLI command. */

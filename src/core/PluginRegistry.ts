@@ -8,9 +8,10 @@ export class PluginRegistry {
   private readonly attributeHandlers = new Map<string, AttributeHandler>();
 
   registerShape(value: ShapeProvider): void {
-    this.register(this.shapes, value);
+    if (this.shapes.has(value.type)) throw new Error(`duplicate registration: ${value.type}`);
+    this.shapes.set(value.type, value);
   }
-  getShape(name: string): ShapeProvider | undefined { return this.shapes.get(name); }
+  getShape(type: string): ShapeProvider | undefined { return this.shapes.get(type); }
 
   registerCommand(value: Command): void {
     this.register(this.commands, value);
