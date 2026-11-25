@@ -10,6 +10,7 @@ export class PluginRegistry {
   registerShape(value: ShapeProvider): void {
     this.register(this.shapes, value);
   }
+  getShape(name: string): ShapeProvider | undefined { return this.shapes.get(name); }
 
   registerCommand(value: Command): void {
     this.register(this.commands, value);
