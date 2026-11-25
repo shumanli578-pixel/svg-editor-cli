@@ -17,6 +17,14 @@ export class PluginRegistry {
     this.register(this.commands, value);
   }
 
+  getCommand(name: string): Command | undefined {
+    return this.commands.get(name);
+  }
+
+  allCommands(): Command[] {
+    return [...this.commands.values()];
+  }
+
   registerDecorator(value: TreeDecorator): void {
     this.register(this.decorators, value);
   }

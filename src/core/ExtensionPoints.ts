@@ -1,22 +1,25 @@
+import type { Shape } from "../model/Shape.ts";
+
 /** Creates one shape type. */
 export interface ShapeProvider {
   readonly type: string;
-  create(id: string, params: string[]): import("../model/Shape.ts").Shape;
+  create(id: string, params: string[]): Shape;
 }
 
-/** Handles one CLI command. */
+/** A named CLI command adapter. */
 export interface Command {
   readonly name: string;
+  readonly description: string;
   execute(args: string[]): void;
 }
 
-/** Adds a label or other suffix to a rendered tree line. */
+/** Adds a suffix to a rendered tree line. */
 export interface TreeDecorator {
   readonly name: string;
   decorate(line: string): string;
 }
 
-/** Handles one shape attribute. */
+/** Handles one attribute for a shape type. */
 export interface AttributeHandler {
   readonly name: string;
   handles(shapeType: string, attribute: string): boolean;

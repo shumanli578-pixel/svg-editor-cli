@@ -12,18 +12,42 @@ import { SetCommand } from "./plugins/builtin/SetCommand.ts";
 import { UngroupCommand } from "./plugins/builtin/UngroupCommand.ts";
 import { ShapeFactory } from "./model/ShapeFactory.ts";
 import { createDefaultSetup } from "./composition/DefaultSetup.ts";
+import type { Command as UndoableCommand } from "./commands/Command.ts";
 import { SvgDocument } from "./model/SvgDocument.ts";
 import { SvgIO } from "./io/SvgIO.ts";
-import type { Command } from "./commands/Command.ts";
 
 const prompt = "svg> ";
-const setup = createDefaultSetup();
-const shapeFactory = new ShapeFactory(setup.registry);
-const svgIO = new SvgIO(shapeFactory);
 let document: SvgDocument | null = null;
 let commandManager = new CommandManager();
 let lastReadPath: string | null = null;
 let undoBlockedByIO = false;
+
+const setup = createDefaultSetup({
+  init: initialize,
+  read: readDocument,
+  save: saveDocument,
+  canvas: canvasCommand,
+  create: createShape,
+  move: moveShape,
+  scale: scaleShape,
+  set: setAttribute,
+  group: groupShapes,
+  delete: deleteShape,
+  ungroup: ungroupShape,
+  addto: addToGroup,
+  front: (args) => changeZOrder(args, "front"),
+  back: (args) => changeZOrder(args, "back"),
+  show: showShape,
+  tree: treeCommand,
+  undo: undoCommand,
+  redo: redoCommand,
+  help: helpCommand,
+  exit: () => {},
+  quit: () => {},
+});
+
+const shapeFactory = new ShapeFactory(setup.registry);
+const svgIO = new SvgIO(shapeFactory);
 
 console.log("svg-editor 0.1 — type 'help' for commands");
 
@@ -72,79 +96,20 @@ terminal.on("close", () => {
 terminal.prompt();
 
 function execute(args: string[]): boolean {
-  const command = args[0].toLowerCase();
+  const name = args[0].toLowerCase();
 
-  switch (command) {
-    case "exit":
-    case "quit":
-      return true;
-    case "help":
-      printHelp();
-      return false;
-    case "init":
-      initialize(args.slice(1));
-      return false;
-    case "read":
-      readDocument(args.slice(1));
-      return false;
-    case "save":
-      saveDocument(args.slice(1));
-      return false;
-    case "canvas":
-      canvasCommand(args.slice(1));
-      return false;
-    case "create":
-      createShape(args.slice(1));
-      return false;
-    case "move":
-      moveShape(args.slice(1));
-      return false;
-    case "scale":
-      scaleShape(args.slice(1));
-      return false;
-    case "set":
-      setAttribute(args.slice(1));
-      return false;
-    case "group":
-      groupShapes(args.slice(1));
-      return false;
-    case "delete":
-      deleteShape(args.slice(1));
-      return false;
-    case "ungroup":
-      ungroupShape(args.slice(1));
-      return false;
-    case "addto":
-      addToGroup(args.slice(1));
-      return false;
-    case "front":
-      changeZOrder(args.slice(1), "front");
-      return false;
-    case "back":
-      changeZOrder(args.slice(1), "back");
-      return false;
-    case "show":
-      showShape(args.slice(1));
-      return false;
-    case "undo":
-      requireNoArguments(command, args);
-      ensureUndoAllowed();
-      requireDocument().manager.undo();
-      console.log("undid last command");
-      return false;
-    case "redo":
-      requireNoArguments(command, args);
-      ensureUndoAllowed();
-      requireDocument().manager.redo();
-      console.log("redid last command");
-      return false;
-    case "tree":
-      if (args.length > 2) throw new Error("usage: tree [id]");
-      console.log(requireDocument().document.treeLines(args[1]).join("\n"));
-      return false;
-    default:
-      throw new Error(`unknown command: ${args[0]}`);
+  if (name === "exit" || name === "quit") {
+    requireNoArguments(name, args);
+    return true;
   }
+
+  const command = setup.registry.getCommand(name);
+  if (!command) {
+    throw new Error(`unknown command: ${args[0]}`);
+  }
+
+  command.execute(args.slice(1));
+  return false;
 }
 
 function initialize(args: string[]): void {
@@ -154,7 +119,6 @@ function initialize(args: string[]): void {
 
   const width = args.length === 0 ? 800 : parseNumber(args[0], "width");
   const height = args.length === 0 ? 600 : parseNumber(args[1], "height");
-  // Construct first so invalid dimensions do not replace the current document.
   const nextDocument = new SvgDocument(width, height);
   document = nextDocument;
   commandManager = new CommandManager();
@@ -177,15 +141,22 @@ function readDocument(args: string[]): void {
 function saveDocument(args: string[]): void {
   if (args.length > 1) throw new Error("usage: save [file.svg]");
   const current = requireDocument();
-  const targetPath = args[0] ?? lastReadPath;
-  if (!targetPath) throw new Error("no read path. use 'save <file.svg>' or read a file first");
+  const targetPath =
+    args[0] ?? lastReadPath;
+  if (!targetPath) {
+    throw new Error("no read path. use 'save <file.svg>' or read a file first");
+  }
+
   svgIO.save(current.document, targetPath);
   undoBlockedByIO = true;
   console.log(`saved to ${targetPath} (${current.document.elementCount} elements)`);
 }
 
 function canvasCommand(args: string[]): void {
-  if (args.length !== 0 && args.length !== 2) throw new Error("usage: canvas [w] [h]");
+  if (args.length !== 0 && args.length !== 2) {
+    throw new Error("usage: canvas [w] [h]");
+  }
+
   const current = requireDocument();
   if (args.length === 0) {
     console.log(`canvas ${current.document.width}x${current.document.height}`);
@@ -200,24 +171,39 @@ function canvasCommand(args: string[]): void {
 }
 
 function createShape(args: string[]): void {
-  if (args.length < 2) throw new Error("usage: create <type> <id> [params...]");
+  if (args.length < 2) {
+    throw new Error("usage: create <type> <id> [params...]");
+  }
+
   const [rawType, id, ...rawParams] = args;
   const type = rawType.toLowerCase();
   let parentId: string | undefined;
   let params = rawParams;
-  if (rawParams.length >= 2 && rawParams[rawParams.length - 2].toLowerCase() === "in") {
+
+  if (
+    rawParams.length >= 2 &&
+    rawParams[rawParams.length - 2].toLowerCase() === "in"
+  ) {
     parentId = rawParams.at(-1);
     params = rawParams.slice(0, -2);
   }
 
   const current = requireDocument();
   const shape = shapeFactory.create(type, id, params);
-  runEdit(current.manager, new CreateCommand(current.document, shape, parentId));
-  console.log(`${shape.kind}#${shape.id} created${parentId ? ` in g#${parentId}` : ""}`);
+  runEdit(
+    current.manager,
+    new CreateCommand(current.document, shape, parentId),
+  );
+  console.log(
+    `${shape.kind}#${shape.id} created${parentId ? ` in g#${parentId}` : ""}`,
+  );
 }
 
 function moveShape(args: string[]): void {
-  if (args.length !== 3) throw new Error("usage: move <id> <dx> <dy>");
+  if (args.length !== 3) {
+    throw new Error("usage: move <id> <dx> <dy>");
+  }
+
   const [id, rawDx, rawDy] = args;
   const dx = parseNumber(rawDx, "dx");
   const dy = parseNumber(rawDy, "dy");
@@ -230,28 +216,39 @@ function moveShape(args: string[]): void {
 }
 
 function scaleShape(args: string[]): void {
-  if (args.length !== 2) throw new Error("usage: scale <id> <factor>");
+  if (args.length !== 2) {
+    throw new Error("usage: scale <id> <factor>");
+  }
+
   const [id, rawFactor] = args;
   const factor = parseNumber(rawFactor, "factor");
   const current = requireDocument();
   const shape = current.document.resolve(id);
   if (!shape) throw new Error(`no such shape: ${id}`);
+
   runEdit(current.manager, new ScaleCommand(current.document, id, factor));
   console.log(`${shape.kind}#${id} scaled by ${factor}`);
 }
 
 function setAttribute(args: string[]): void {
-  if (args.length !== 3) throw new Error("usage: set <id> <attr> <value>");
+  if (args.length !== 3) {
+    throw new Error("usage: set <id> <attr> <value>");
+  }
+
   const [id, attribute, value] = args;
   const current = requireDocument();
   const shape = current.document.resolve(id);
   if (!shape) throw new Error(`no such shape: ${id}`);
+
   runEdit(current.manager, new SetCommand(current.document, id, attribute, value));
   console.log(`${shape.kind}#${id} updated: ${attribute}=${JSON.stringify(value)}`);
 }
 
 function groupShapes(args: string[]): void {
-  if (args.length < 3) throw new Error("usage: group <newGid> <id1> <id2>...");
+  if (args.length < 3) {
+    throw new Error("usage: group <newGid> <id1> <id2>...");
+  }
+
   const [groupId, ...shapeIds] = args;
   const current = requireDocument();
   runEdit(current.manager, new GroupCommand(current.document, groupId, shapeIds));
@@ -263,6 +260,7 @@ function deleteShape(args: string[]): void {
   const current = requireDocument();
   const shape = current.document.resolve(args[0]);
   if (!shape) throw new Error(`no such shape: ${args[0]}`);
+
   runEdit(current.manager, new DeleteCommand(current.document, args[0]));
   console.log(`${shape.kind}#${shape.id} deleted`);
 }
@@ -282,14 +280,22 @@ function addToGroup(args: string[]): void {
   console.log(`${shapeId} moved into g#${groupId}`);
 }
 
-function changeZOrder(args: string[], position: "front" | "back"): void {
-  if (args.length !== 1) throw new Error(`usage: ${position} <id>`);
+function changeZOrder(
+  args: string[],
+  position: "front" | "back",
+): void {
+  if (args.length !== 1) {
+    throw new Error(`usage: ${position} <id>`);
+  }
+
   const current = requireDocument();
   const shape = current.document.resolve(args[0]);
   if (!shape) throw new Error(`no such shape: ${args[0]}`);
-  const command = position === "front"
-    ? new FrontCommand(current.document, args[0])
-    : new BackCommand(current.document, args[0]);
+
+  const command =
+    position === "front"
+      ? new FrontCommand(current.document, args[0])
+      : new BackCommand(current.document, args[0]);
   runEdit(current.manager, command);
   console.log(`${shape.kind}#${shape.id} moved to ${position}`);
 }
@@ -299,18 +305,52 @@ function showShape(args: string[]): void {
   console.log(requireDocument().document.showLines(args[0]).join("\n"));
 }
 
-function requireDocument(): { document: SvgDocument; manager: CommandManager } {
+function treeCommand(args: string[]): void {
+  if (args.length > 1) throw new Error("usage: tree [id]");
+  console.log(requireDocument().document.treeLines(args[0]).join("\n"));
+}
+
+function undoCommand(args: string[]): void {
+  requireNoArguments("undo", ["undo", ...args]);
+  ensureUndoAllowed();
+  requireDocument().manager.undo();
+  console.log("undid last command");
+}
+
+function redoCommand(args: string[]): void {
+  requireNoArguments("redo", ["redo", ...args]);
+  ensureUndoAllowed();
+  requireDocument().manager.redo();
+  console.log("redid last command");
+}
+
+function helpCommand(args: string[]): void {
+  requireNoArguments("help", ["help", ...args]);
+  console.log("Commands:");
+  for (const command of setup.registry.allCommands()) {
+    console.log(`  ${command.name.padEnd(12)} ${command.description}`);
+  }
+  console.log("  exit         quit the editor");
+  console.log("  quit         quit the editor");
+}
+
+function requireDocument(): {
+  document: SvgDocument;
+  manager: CommandManager;
+} {
   if (!document) throw new Error("no document. use 'init' first");
   return { document, manager: commandManager };
 }
 
-function runEdit(manager: CommandManager, command: Command): void {
+function runEdit(manager: CommandManager, command: UndoableCommand): void {
   manager.execute(command);
   undoBlockedByIO = false;
 }
 
 function ensureUndoAllowed(): void {
-  if (undoBlockedByIO) throw new Error("undo not allowed after io command");
+  if (undoBlockedByIO) {
+    throw new Error("undo not allowed after io command");
+  }
 }
 
 function requireNoArguments(command: string, args: string[]): void {
@@ -318,9 +358,13 @@ function requireNoArguments(command: string, args: string[]): void {
 }
 
 function parseNumber(value: string | undefined, name: string): number {
-  if (value === undefined || value.trim() === "") throw new Error(`missing parameter: ${name}`);
+  if (value === undefined || value.trim() === "") {
+    throw new Error(`missing parameter: ${name}`);
+  }
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new Error(`parameter ${name} must be a finite number`);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`parameter ${name} must be a finite number`);
+  }
   return parsed;
 }
 
@@ -334,7 +378,10 @@ function tokenize(line: string): string[] {
     const character = line[index];
 
     if (inQuotes) {
-      if (character === "\\" && (line[index + 1] === "\\" || line[index + 1] === '"')) {
+      if (
+        character === "\\" &&
+        (line[index + 1] === "\\" || line[index + 1] === '"')
+      ) {
         token += line[index + 1];
         index += 1;
       } else if (character === '"') {
@@ -363,32 +410,4 @@ function tokenize(line: string): string[] {
   if (inQuotes) throw new Error("unterminated quoted string");
   if (tokenStarted) result.push(token);
   return result;
-}
-
-function printHelp(): void {
-  console.log("Commands:");
-  console.log("  init [w] [h]                         create a canvas (default 800x600)");
-  console.log("  read <file.svg>                      read an SVG file");
-  console.log("  save [file.svg]                      save the current SVG document");
-  console.log("  canvas [w] [h]                       show or resize the canvas");
-  console.log("  create rect <id> <x> <y> <w> <h> [fill]");
-  console.log("  create circle <id> <cx> <cy> <r> [fill]");
-  console.log("  create ellipse <id> <cx> <cy> <rx> <ry> [fill]");
-  console.log("  create line <id> <x1> <y1> <x2> <y2> [stroke]");
-  console.log('  create text <id> <x> <y> "content"');
-  console.log("  create g <id>");
-  console.log("  create ... in <containerId>       create inside a group");
-  console.log("  move <id> <dx> <dy>                  move a shape by an offset");
-  console.log("  scale <id> <factor>                  scale a shape or group");
-  console.log("  set <id> <attr> <value>              change an attribute");
-  console.log("  group <newGid> <id1> <id2>...        group existing shapes");
-  console.log("  ungroup <gid>                        dissolve a nested group");
-  console.log("  addto <gid> <id>                     move a shape into a group");
-  console.log("  delete <id>                          delete a shape or subtree");
-  console.log("  front <id> | back <id>               change sibling draw order");
-  console.log("  show <id>                            show one shape's attributes");
-  console.log("  tree [id]                            show the document structure");
-  console.log("  undo | redo                          undo or redo an edit");
-  console.log("  help                                 show this help");
-  console.log("  exit                                 quit the editor");
 }

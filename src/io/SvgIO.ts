@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { DOMParser } from "@xmldom/xmldom";
 import { Group } from "../plugins/builtin/Group.ts";
 import { ShapeFactory } from "../model/ShapeFactory.ts";
-import { createDefaultSetup } from "../composition/DefaultSetup.ts";
 import { SvgDocument } from "../model/SvgDocument.ts";
 import type { Shape } from "../model/Shape.ts";
 
@@ -17,15 +16,7 @@ export interface SvgReadResult {
 
 /** Reads and writes SVG documents, keeping XML handling outside the model and CLI. */
 export class SvgIO {
-  private readonly factory: ShapeFactory;
-
-  constructor(factory?: ShapeFactory) {
-    if (factory) this.factory = factory;
-    else {
-      // Standalone IO instances receive the same default shape registrations.
-      this.factory = new ShapeFactory(createDefaultSetup().registry);
-    }
-  }
+  constructor(private readonly factory: ShapeFactory) {}
 
   read(filePath: string): SvgReadResult {
     const absolutePath = resolve(filePath);
