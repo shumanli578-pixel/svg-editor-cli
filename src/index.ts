@@ -15,6 +15,8 @@ import { createDefaultSetup } from "./composition/DefaultSetup.ts";
 import type { Command as UndoableCommand } from "./commands/Command.ts";
 import { SvgDocument } from "./model/SvgDocument.ts";
 import { SvgIO } from "./io/SvgIO.ts";
+import { StatsCommand } from "./plugins/stats.ts"; 
+import { DirCommand } from "./plugins/dir.ts";
 
 const prompt = "svg> ";
 let document: SvgDocument | null = null;
@@ -22,28 +24,31 @@ let commandManager = new CommandManager();
 let lastReadPath: string | null = null;
 let undoBlockedByIO = false;
 
+const statsCommand = new StatsCommand(() => document);
+const dirCommand = new DirCommand();
+
 const setup = createDefaultSetup({
-  init: initialize,
-  read: readDocument,
-  save: saveDocument,
-  canvas: canvasCommand,
-  create: createShape,
-  move: moveShape,
-  scale: scaleShape,
-  set: setAttribute,
-  group: groupShapes,
-  delete: deleteShape,
-  ungroup: ungroupShape,
-  addto: addToGroup,
-  front: (args) => changeZOrder(args, "front"),
-  back: (args) => changeZOrder(args, "back"),
-  show: showShape,
-  tree: treeCommand,
-  undo: undoCommand,
-  redo: redoCommand,
-  help: helpCommand,
-  exit: () => {},
-  quit: () => {},
+  init: { description: "create a canvas", execute: initialize },
+  read: { description: "read an SVG file", execute: readDocument },
+  save: { description: "save the current SVG document", execute: saveDocument },
+  canvas: { description: "show or resize the canvas", execute: canvasCommand },
+  create: { description: "create a shape", execute: createShape },
+  move: { description: "move a shape", execute: moveShape },
+  scale: { description: "scale a shape or group", execute: scaleShape },
+  set: { description: "change a shape attribute", execute: setAttribute },
+  group: { description: "group existing shapes", execute: groupShapes },
+  delete: { description: "delete a shape or subtree", execute: deleteShape },
+  ungroup: { description: "dissolve a group", execute: ungroupShape },
+  addto: { description: "add a shape to a group", execute: addToGroup },
+  front: { description: "move a shape to the front", execute: (args) => changeZOrder(args, "front") },
+  back: { description: "move a shape to the back", execute: (args) => changeZOrder(args, "back") },
+  show: { description: "show shape attributes", execute: showShape },
+  tree: { description: "show the document structure", execute: treeCommand },
+  undo: { description: "undo the last edit", execute: undoCommand },
+  redo: { description: "redo the last edit", execute: redoCommand },
+  help: { description: "show all commands", execute: helpCommand },
+  stats: statsCommand,
+  dir: dirCommand,
 });
 
 const shapeFactory = new ShapeFactory(setup.registry);

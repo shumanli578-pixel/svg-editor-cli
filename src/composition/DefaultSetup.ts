@@ -1,5 +1,5 @@
 import { PluginRegistry } from "../core/PluginRegistry.ts";
-import type { Command, ShapeProvider } from "../core/ExtensionPoints.ts";
+import type { ShapeProvider } from "../core/ExtensionPoints.ts";
 import type { Shape } from "../model/Shape.ts";
 import { Circle } from "../plugins/builtin/Circle.ts";
 import { Ellipse } from "../plugins/builtin/Ellipse.ts";
@@ -8,9 +8,13 @@ import { Line } from "../plugins/builtin/Line.ts";
 import { Rect } from "../plugins/builtin/Rect.ts";
 import { Text } from "../plugins/builtin/Text.ts";
 
-export type CommandHandler = (args: string[]) => void;
-
-export type CommandHandlers = Record<string, CommandHandler>;
+export type CommandHandlers = Record<
+  string,
+  {
+    readonly description: string;
+    execute(args: string[]): void;
+  }
+>;
 
 function number(value: string | undefined, name: string): number {
   if (value === undefined || value.trim() === "") {
@@ -111,29 +115,6 @@ const shapeProviders: ShapeProvider[] = [
   },
 ];
 
-const commandDescriptions: Record<string, string> = {
-  addto: "add a shape to a group",
-  back: "move a shape to the back",
-  canvas: "show or resize the canvas",
-  create: "create a shape",
-  delete: "delete a shape or subtree",
-  exit: "quit the editor",
-  front: "move a shape to the front",
-  group: "group existing shapes",
-  help: "show all commands",
-  init: "create a canvas",
-  move: "move a shape",
-  read: "read an SVG file",
-  redo: "redo an edit",
-  save: "save the current SVG document",
-  scale: "scale a shape or group",
-  set: "change a shape attribute",
-  show: "show shape attributes",
-  tree: "show the document structure",
-  undo: "undo the last edit",
-  ungroup: "dissolve a group",
-};
-
 export function createDefaultSetup(
   handlers: CommandHandlers,
 ): { registry: PluginRegistry } {
@@ -143,13 +124,12 @@ export function createDefaultSetup(
     registry.registerShape(provider);
   }
 
-  for (const [name, execute] of Object.entries(handlers)) {
-    const command: Command = {
+  for (const [name, command] of Object.entries(handlers)) {
+    registry.registerCommand({
       name,
-      description: commandDescriptions[name] ?? name,
-      execute,
-    };
-    registry.registerCommand(command);
+      description: command.description,
+      execute: (args) => command.execute(args),
+    });
   }
 
   return { registry };
