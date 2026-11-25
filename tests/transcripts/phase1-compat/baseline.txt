@@ -1,7 +1,3 @@
-
-> svg-editor-cli@0.1.0 cli
-> tsx src/index.ts
-
 svg-editor 0.1 — type 'help' for commands
 svg> canvas 800x600 created
 svg> rect#bg created
