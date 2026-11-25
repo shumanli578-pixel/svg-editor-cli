@@ -1,9 +1,9 @@
-import { Circle } from "./Circle.ts";
-import { Ellipse } from "./Ellipse.ts";
-import { Group } from "./Group.ts";
-import { Line } from "./Line.ts";
-import { Rect } from "./Rect.ts";
-import { Text } from "./Text.ts";
+import { Circle } from "../plugins/builtin/Circle.ts";
+import { Ellipse } from "../plugins/builtin/Ellipse.ts";
+import { Group } from "../plugins/builtin/Group.ts";
+import { Line } from "../plugins/builtin/Line.ts";
+import { Rect } from "../plugins/builtin/Rect.ts";
+import { Text } from "../plugins/builtin/Text.ts";
 import type { Shape } from "./Shape.ts";
 
 export class ShapeFactory {

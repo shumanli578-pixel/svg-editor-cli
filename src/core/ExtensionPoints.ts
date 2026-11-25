@@ -1,13 +1,13 @@
 /** Creates one shape type. */
 export interface ShapeProvider {
   readonly name: string;
-  create(...args: unknown[]): unknown;
+  create(id: string, params: string[]): unknown;
 }
 
 /** Handles one CLI command. */
 export interface Command {
   readonly name: string;
-  execute(...args: unknown[]): unknown;
+  execute(args: string[]): void;
 }
 
 /** Adds a label or other suffix to a rendered tree line. */

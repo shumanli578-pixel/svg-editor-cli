@@ -1,4 +1,4 @@
-import { Shape, type AttributeEntry } from "./Shape.ts";
+import { Shape, type AttributeEntry } from "../../model/Shape.ts";
 
 export class Circle extends Shape {
   private cx: number;

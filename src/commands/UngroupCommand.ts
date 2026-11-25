@@ -1,4 +1,4 @@
-import { Group } from "../model/Group.ts";
+import { Group } from "../plugins/builtin/Group.ts";
 import type { SvgDocument, ShapeLocation } from "../model/SvgDocument.ts";
 import type { Command } from "./Command.ts";
 

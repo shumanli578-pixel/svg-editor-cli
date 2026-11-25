@@ -100,4 +100,4 @@ export abstract class Shape {
   }
 }
 
-import type { Group } from "./Group.ts";
+import type { Group } from "../plugins/builtin/Group.ts";

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DOMParser } from "@xmldom/xmldom";
-import { Group } from "../model/Group.ts";
+import { Group } from "../plugins/builtin/Group.ts";
 import { ShapeFactory } from "../model/ShapeFactory.ts";
 import { SvgDocument } from "../model/SvgDocument.ts";
 import type { Shape } from "../model/Shape.ts";
