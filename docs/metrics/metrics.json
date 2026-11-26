@@ -1,0 +1,300 @@
+{
+  "baseline": "final",
+  "current": "working tree based on HEAD",
+  "complexityMethod": "estimated count of if/switch/case/catch/ternary/&&/|| plus one base path",
+  "excludedDirectories": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "build"
+  ],
+  "files": [
+    {
+      "path": "docs/metrics/generate.ts",
+      "responsibility": "generate",
+      "category": "kernel",
+      "lines": 105,
+      "estimatedComplexity": 21
+    },
+    {
+      "path": "src/commands/Command.ts",
+      "responsibility": "command",
+      "category": "kernel",
+      "lines": 5,
+      "estimatedComplexity": 1
+    },
+    {
+      "path": "src/commands/CommandManager.ts",
+      "responsibility": "Command Manager",
+      "category": "kernel",
+      "lines": 33,
+      "estimatedComplexity": 3
+    },
+    {
+      "path": "src/composition/DefaultSetup.ts",
+      "responsibility": "Default Setup",
+      "category": "composition",
+      "lines": 144,
+      "estimatedComplexity": 6
+    },
+    {
+      "path": "src/core/ExtensionPoints.ts",
+      "responsibility": "Extension Points",
+      "category": "kernel",
+      "lines": 28,
+      "estimatedComplexity": 2
+    },
+    {
+      "path": "src/core/PluginRegistry.ts",
+      "responsibility": "Plugin Registry",
+      "category": "kernel",
+      "lines": 69,
+      "estimatedComplexity": 4
+    },
+    {
+      "path": "src/index.ts",
+      "responsibility": "index",
+      "category": "composition",
+      "lines": 449,
+      "estimatedComplexity": 62
+    },
+    {
+      "path": "src/io/SvgIO.ts",
+      "responsibility": "Svg IO",
+      "category": "kernel",
+      "lines": 226,
+      "estimatedComplexity": 47
+    },
+    {
+      "path": "src/loader/PluginLoader.ts",
+      "responsibility": "Plugin Loader",
+      "category": "kernel",
+      "lines": 71,
+      "estimatedComplexity": 32
+    },
+    {
+      "path": "src/model/Shape.ts",
+      "responsibility": "Shape",
+      "category": "kernel",
+      "lines": 103,
+      "estimatedComplexity": 16
+    },
+    {
+      "path": "src/model/ShapeFactory.ts",
+      "responsibility": "Shape Factory",
+      "category": "kernel",
+      "lines": 12,
+      "estimatedComplexity": 3
+    },
+    {
+      "path": "src/model/SvgDocument.ts",
+      "responsibility": "Svg Document",
+      "category": "kernel",
+      "lines": 217,
+      "estimatedComplexity": 69
+    },
+    {
+      "path": "src/plugins/box.ts",
+      "responsibility": "box",
+      "category": "plugins",
+      "lines": 56,
+      "estimatedComplexity": 10
+    },
+    {
+      "path": "src/plugins/builtin/AddToCommand.ts",
+      "responsibility": "Add To  command",
+      "category": "plugins",
+      "lines": 30,
+      "estimatedComplexity": 6
+    },
+    {
+      "path": "src/plugins/builtin/BackCommand.ts",
+      "responsibility": "Back  command",
+      "category": "plugins",
+      "lines": 23,
+      "estimatedComplexity": 6
+    },
+    {
+      "path": "src/plugins/builtin/Circle.ts",
+      "responsibility": "Circle",
+      "category": "plugins",
+      "lines": 32,
+      "estimatedComplexity": 9
+    },
+    {
+      "path": "src/plugins/builtin/CreateCommand.ts",
+      "responsibility": "Create  command",
+      "category": "plugins",
+      "lines": 31,
+      "estimatedComplexity": 4
+    },
+    {
+      "path": "src/plugins/builtin/DeleteCommand.ts",
+      "responsibility": "Delete  command",
+      "category": "plugins",
+      "lines": 24,
+      "estimatedComplexity": 6
+    },
+    {
+      "path": "src/plugins/builtin/Ellipse.ts",
+      "responsibility": "Ellipse",
+      "category": "plugins",
+      "lines": 34,
+      "estimatedComplexity": 10
+    },
+    {
+      "path": "src/plugins/builtin/FrontCommand.ts",
+      "responsibility": "Front  command",
+      "category": "plugins",
+      "lines": 23,
+      "estimatedComplexity": 6
+    },
+    {
+      "path": "src/plugins/builtin/Group.ts",
+      "responsibility": "Group",
+      "category": "plugins",
+      "lines": 58,
+      "estimatedComplexity": 11
+    },
+    {
+      "path": "src/plugins/builtin/GroupCommand.ts",
+      "responsibility": "Group  command",
+      "category": "plugins",
+      "lines": 73,
+      "estimatedComplexity": 27
+    },
+    {
+      "path": "src/plugins/builtin/Line.ts",
+      "responsibility": "Line",
+      "category": "plugins",
+      "lines": 34,
+      "estimatedComplexity": 10
+    },
+    {
+      "path": "src/plugins/builtin/MoveCommand.ts",
+      "responsibility": "Move  command",
+      "category": "plugins",
+      "lines": 36,
+      "estimatedComplexity": 5
+    },
+    {
+      "path": "src/plugins/builtin/Rect.ts",
+      "responsibility": "Rect",
+      "category": "plugins",
+      "lines": 46,
+      "estimatedComplexity": 10
+    },
+    {
+      "path": "src/plugins/builtin/ScaleCommand.ts",
+      "responsibility": "Scale  command",
+      "category": "plugins",
+      "lines": 27,
+      "estimatedComplexity": 5
+    },
+    {
+      "path": "src/plugins/builtin/SetCommand.ts",
+      "responsibility": "Set  command",
+      "category": "plugins",
+      "lines": 38,
+      "estimatedComplexity": 6
+    },
+    {
+      "path": "src/plugins/builtin/Text.ts",
+      "responsibility": "Text",
+      "category": "plugins",
+      "lines": 35,
+      "estimatedComplexity": 10
+    },
+    {
+      "path": "src/plugins/builtin/UngroupCommand.ts",
+      "responsibility": "Ungroup  command",
+      "category": "plugins",
+      "lines": 37,
+      "estimatedComplexity": 11
+    },
+    {
+      "path": "src/plugins/decorators.ts",
+      "responsibility": "decorators",
+      "category": "plugins",
+      "lines": 15,
+      "estimatedComplexity": 3
+    },
+    {
+      "path": "src/plugins/dir-plugin.ts",
+      "responsibility": "dir-plugin",
+      "category": "plugins",
+      "lines": 8,
+      "estimatedComplexity": 1
+    },
+    {
+      "path": "src/plugins/dir.ts",
+      "responsibility": "dir",
+      "category": "plugins",
+      "lines": 58,
+      "estimatedComplexity": 4
+    },
+    {
+      "path": "src/plugins/stats.ts",
+      "responsibility": "stats",
+      "category": "plugins",
+      "lines": 52,
+      "estimatedComplexity": 7
+    },
+    {
+      "path": "tests/dir.test.ts",
+      "responsibility": "dir.test",
+      "category": "kernel",
+      "lines": 47,
+      "estimatedComplexity": 1
+    },
+    {
+      "path": "tests/loader.test.ts",
+      "responsibility": "loader.test",
+      "category": "kernel",
+      "lines": 56,
+      "estimatedComplexity": 1
+    }
+  ],
+  "totals": {
+    "kernel": {
+      "lines": 972,
+      "complexity": 200
+    },
+    "composition": {
+      "lines": 593,
+      "complexity": 68
+    },
+    "plugins": {
+      "lines": 770,
+      "complexity": 167
+    }
+  },
+  "deltaFromFinal": {
+    "kernel": {
+      "lines": -222,
+      "estimatedComplexity": -92
+    },
+    "composition": {
+      "lines": 201,
+      "estimatedComplexity": -9
+    },
+    "plugins": {
+      "lines": 770,
+      "estimatedComplexity": 167
+    }
+  },
+  "finalTotals": {
+    "kernel": {
+      "lines": 1194,
+      "complexity": 292
+    },
+    "composition": {
+      "lines": 392,
+      "complexity": 77
+    },
+    "plugins": {
+      "lines": 0,
+      "complexity": 0
+    }
+  }
+}
