@@ -12,6 +12,7 @@ export class PluginRegistry {
     this.shapes.set(value.type, value);
   }
   getShape(type: string): ShapeProvider | undefined { return this.shapes.get(type); }
+  allShapes(): ShapeProvider[] { return [...this.shapes.values()]; }
 
   registerCommand(value: Command): void {
     this.register(this.commands, value);
@@ -29,6 +30,7 @@ export class PluginRegistry {
     this.register(this.decorators, value);
   }
   getDecorators(): TreeDecorator[] { return [...this.decorators.values()]; }
+  allDecorators(): TreeDecorator[] { return [...this.decorators.values()]; }
   getDecorator(name: string): TreeDecorator | undefined { return this.decorators.get(name); }
 
   registerAttributeHandler(value: AttributeHandler): void {
@@ -37,6 +39,25 @@ export class PluginRegistry {
 
   getAttributeHandlers(): AttributeHandler[] {
     return [...this.attributeHandlers.values()];
+  }
+  allAttributeHandlers(): AttributeHandler[] { return [...this.attributeHandlers.values()]; }
+
+  mergeFrom(other: PluginRegistry): void {
+    const categories = [
+      [this.shapes, other.allShapes(), (x: ShapeProvider) => x.type],
+      [this.commands, other.allCommands(), (x: Command) => x.name],
+      [this.decorators, other.allDecorators(), (x: TreeDecorator) => x.name],
+      [this.attributeHandlers, other.allAttributeHandlers(), (x: AttributeHandler) => x.name],
+    ] as const;
+    for (const [target, values, key] of categories) {
+      for (const value of values) {
+        if (target.has(key(value as never))) throw new Error(`duplicate registration`);
+      }
+    }
+    for (const value of other.allShapes()) this.registerShape(value);
+    for (const value of other.allCommands()) this.registerCommand(value);
+    for (const value of other.allDecorators()) this.registerDecorator(value);
+    for (const value of other.allAttributeHandlers()) this.registerAttributeHandler(value);
   }
 
   private register<T extends { readonly name: string }>(registry: Map<string, T>, value: T): void {
