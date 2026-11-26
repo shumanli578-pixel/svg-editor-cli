@@ -1,0 +1,6 @@
+{
+  "name": "svg-editor-plugin-dir",
+  "contributes": {
+    "commands": ["dir"]
+  }
+}

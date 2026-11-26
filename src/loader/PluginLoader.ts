@@ -6,6 +6,7 @@ import { PluginRegistry } from "../core/PluginRegistry.ts";
 
 export interface PluginConfigEntry {
   module: string;
+  manifest?: string;
   options?: unknown;
   enabled?: boolean;
 }
@@ -31,10 +32,14 @@ export class PluginLoader {
       catch { console.error(`error: plugin not found: ${entry.module}`); continue; }
       let manifest: Manifest;
       try {
-        let dir = dirname(resolved);
-        while (true) {
-          try { manifest = JSON.parse(readFileSync(resolve(dir, "package.json"), "utf8")) as Manifest; break; }
-          catch { const parent = dirname(dir); if (parent === dir) throw new Error("package.json missing"); dir = parent; }
+        if (entry.manifest) {
+          manifest = JSON.parse(readFileSync(resolve(dirname(resolve(configPath)), entry.manifest), "utf8")) as Manifest;
+        } else {
+          let dir = dirname(resolved);
+          while (true) {
+            try { manifest = JSON.parse(readFileSync(resolve(dir, "package.json"), "utf8")) as Manifest; break; }
+            catch { const parent = dirname(dir); if (parent === dir) throw new Error("package.json missing"); dir = parent; }
+          }
         }
       } catch { manifest = {}; }
       let module: PluginExport;

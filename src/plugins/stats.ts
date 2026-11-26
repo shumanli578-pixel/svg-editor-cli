@@ -2,19 +2,23 @@ import type { Command } from "../core/ExtensionPoints.ts";
 import type { SvgDocument } from "../model/SvgDocument.ts";
 import { Group } from "./builtin/Group.ts";
 
+export interface StatsContext {
+  getDocument: () => import("../model/SvgDocument.ts").SvgDocument | null;
+}
+
 export class StatsCommand implements Command {
   readonly name = "stats";
   readonly description = "count leaf shapes and containers";
 
   constructor(
-    private readonly getDocument: () => SvgDocument | null,
+    private readonly context: StatsContext,
     private readonly write: (text: string) => void = console.log,
   ) {}
 
   execute(args: string[]): void {
     if (args.length !== 0) throw new Error("usage: stats");
 
-    const document = this.getDocument();
+    const document = this.context.getDocument();
     if (!document) throw new Error("no document. use 'init' or 'read' first");
 
     const counts = new Map<string, number>();

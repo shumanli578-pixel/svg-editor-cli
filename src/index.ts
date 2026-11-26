@@ -17,88 +17,107 @@ import { SvgDocument } from "./model/SvgDocument.ts";
 import { SvgIO } from "./io/SvgIO.ts";
 import { StatsCommand } from "./plugins/stats.ts"; 
 import { DirCommand } from "./plugins/dir.ts";
+import { PluginLoader } from "./loader/PluginLoader.ts";
+import { PluginRegistry } from "./core/PluginRegistry.ts";
 
 const prompt = "svg> ";
-let document: SvgDocument | null = null;
-let commandManager = new CommandManager();
-let lastReadPath: string | null = null;
-let undoBlockedByIO = false;
 
-const statsCommand = new StatsCommand(() => document);
-const dirCommand = new DirCommand();
+async function main(): Promise<void> {
+  let document: SvgDocument | null = null;
+  let commandManager = new CommandManager();
+  let lastReadPath: string | null = null;
+  let undoBlockedByIO = false;
 
-const setup = createDefaultSetup({
-  init: { description: "create a canvas", execute: initialize },
-  read: { description: "read an SVG file", execute: readDocument },
-  save: { description: "save the current SVG document", execute: saveDocument },
-  canvas: { description: "show or resize the canvas", execute: canvasCommand },
-  create: { description: "create a shape", execute: createShape },
-  move: { description: "move a shape", execute: moveShape },
-  scale: { description: "scale a shape or group", execute: scaleShape },
-  set: { description: "change a shape attribute", execute: setAttribute },
-  group: { description: "group existing shapes", execute: groupShapes },
-  delete: { description: "delete a shape or subtree", execute: deleteShape },
-  ungroup: { description: "dissolve a group", execute: ungroupShape },
-  addto: { description: "add a shape to a group", execute: addToGroup },
-  front: { description: "move a shape to the front", execute: (args) => changeZOrder(args, "front") },
-  back: { description: "move a shape to the back", execute: (args) => changeZOrder(args, "back") },
-  show: { description: "show shape attributes", execute: showShape },
-  tree: { description: "show the document structure", execute: treeCommand },
-  undo: { description: "undo the last edit", execute: undoCommand },
-  redo: { description: "redo the last edit", execute: redoCommand },
-  help: { description: "show all commands", execute: helpCommand },
-  stats: statsCommand,
-  dir: dirCommand,
-}, () => document);
+  const statsCommand = new StatsCommand({ getDocument: () => document });
+  const dirCommand = new DirCommand();
 
-const shapeFactory = new ShapeFactory(setup.registry);
-const svgIO = new SvgIO(shapeFactory);
+  let registry: PluginRegistry;
 
-console.log("svg-editor 0.1 — type 'help' for commands");
-
-const terminal = createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  prompt,
-});
-
-terminal.on("line", (input: string) => {
-  const line = input.trim();
-
-  if (line.length === 0 || line.startsWith("#")) {
-    terminal.prompt();
-    return;
+  // 解析是否有 --config 参数
+  const configIndex = process.argv.indexOf("--config");
+  if (configIndex >= 0) {
+    const configPath = process.argv[configIndex + 1];
+    if (!configPath) throw new Error("missing path after --config");
+    registry = new PluginRegistry();
+    const loader = new PluginLoader();
+    // 假设你的 Loader 的 load 方法签名是 (configPath, registry)
+    await loader.load(configPath, registry); 
+  } else {
+    registry = createDefaultSetup({
+      init: { description: "create a canvas", execute: initialize },
+      read: { description: "read an SVG file", execute: readDocument },
+      save: { description: "save the current SVG document", execute: saveDocument },
+      canvas: { description: "show or resize the canvas", execute: canvasCommand },
+      create: { description: "create a shape", execute: createShape },
+      move: { description: "move a shape", execute: moveShape },
+      scale: { description: "scale a shape or group", execute: scaleShape },
+      set: { description: "change a shape attribute", execute: setAttribute },
+      group: { description: "group existing shapes", execute: groupShapes },
+      delete: { description: "delete a shape or subtree", execute: deleteShape },
+      ungroup: { description: "dissolve a group", execute: ungroupShape },
+      addto: { description: "add a shape to a group", execute: addToGroup },
+      front: { description: "move a shape to the front", execute: (args) => changeZOrder(args, "front") },
+      back: { description: "move a shape to the back", execute: (args) => changeZOrder(args, "back") },
+      show: { description: "show shape attributes", execute: showShape },
+      tree: { description: "show the document structure", execute: treeCommand },
+      undo: { description: "undo the last edit", execute: undoCommand },
+      redo: { description: "redo the last edit", execute: redoCommand },
+      help: { description: "show all commands", execute: helpCommand },
+      stats: statsCommand,
+      dir: dirCommand,
+    }).registry;
   }
 
-  try {
-    const args = tokenize(line);
-    if (args.length === 0) {
+  const setup = { registry };
+  const shapeFactory = new ShapeFactory(registry);
+  const svgIO = new SvgIO(shapeFactory);
+
+  console.log("svg-editor 0.1 — type 'help' for commands");
+
+  const terminal = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt,
+  });
+
+  terminal.on("line", (input: string) => {
+    const line = input.trim();
+
+    if (line.length === 0 || line.startsWith("#")) {
       terminal.prompt();
       return;
     }
 
-    if (execute(args)) {
-      terminal.close();
-      return;
+    try {
+      const args = tokenize(line);
+      if (args.length === 0) {
+        terminal.prompt();
+        return;
+      }
+
+      if (execute(args)) {
+        terminal.close();
+        return;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`error: ${message}`);
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.log(`error: ${message}`);
-  }
+
+    terminal.prompt();
+  });
+
+  terminal.on("SIGINT", () => {
+    console.log("^C");
+    terminal.close();
+  });
+
+  terminal.on("close", () => {
+    console.log("bye");
+  });
 
   terminal.prompt();
-});
 
-terminal.on("SIGINT", () => {
-  console.log("^C");
-  terminal.close();
-});
-
-terminal.on("close", () => {
-  console.log("bye");
-});
-
-terminal.prompt();
 
 function execute(args: string[]): boolean {
   const name = args[0].toLowerCase();
@@ -425,3 +444,6 @@ function tokenize(line: string): string[] {
   if (tokenStarted) result.push(token);
   return result;
 }
+}
+
+main().catch(console.error);

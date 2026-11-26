@@ -1,0 +1,8 @@
+{
+  "plugins": [
+    {
+      "module": "./src/plugins/dir-plugin.ts",
+      "manifest": "./src/plugins/dir-plugin.package.json"
+    }
+  ]
+}
