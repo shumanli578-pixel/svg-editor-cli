@@ -7,6 +7,7 @@ import { Group } from "../plugins/builtin/Group.ts";
 import { Line } from "../plugins/builtin/Line.ts";
 import { Rect } from "../plugins/builtin/Rect.ts";
 import { Text } from "../plugins/builtin/Text.ts";
+import { BoxShapeProvider } from "../plugins/box.ts";
 
 export type CommandHandlers = Record<
   string,
@@ -123,6 +124,7 @@ export function createDefaultSetup(
   for (const provider of shapeProviders) {
     registry.registerShape(provider);
   }
+  registry.registerShape(BoxShapeProvider);
 
   for (const [name, command] of Object.entries(handlers)) {
     registry.registerCommand({
