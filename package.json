@@ -6,6 +6,7 @@
   "description": "A command-line SVG editor for Software Design Project 1.",
   "scripts": {
     "cli": "tsx src/index.ts",
+    "test": "node --import tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
