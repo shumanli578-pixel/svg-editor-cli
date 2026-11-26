@@ -16,7 +16,8 @@ export interface Command {
 /** Adds a suffix to a rendered tree line. */
 export interface TreeDecorator {
   readonly name: string;
-  decorate(line: string): string;
+  decorate(shape: Shape): string;
+  setDirty?(value: boolean): void;
 }
 
 /** Handles one attribute for a shape type. */

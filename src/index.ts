@@ -153,6 +153,7 @@ function saveDocument(args: string[]): void {
   }
 
   svgIO.save(current.document, targetPath);
+  setup.registry.getDecorator("modified-star")?.setDirty?.(false);
   undoBlockedByIO = true;
   console.log(`saved to ${targetPath} (${current.document.elementCount} elements)`);
 }
@@ -319,7 +320,7 @@ function showShape(args: string[]): void {
 
 function treeCommand(args: string[]): void {
   if (args.length > 1) throw new Error("usage: tree [id]");
-  console.log(requireDocument().document.treeLines(args[0]).join("\n"));
+  console.log(requireDocument().document.treeLines(args[0], setup.registry.getDecorators()).join("\n"));
 }
 
 function undoCommand(args: string[]): void {
@@ -356,6 +357,7 @@ function requireDocument(): {
 
 function runEdit(manager: CommandManager, command: UndoableCommand): void {
   manager.execute(command);
+  setup.registry.getDecorator("modified-star")?.setDirty?.(true);
   undoBlockedByIO = false;
 }
 

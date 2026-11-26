@@ -28,6 +28,8 @@ export class PluginRegistry {
   registerDecorator(value: TreeDecorator): void {
     this.register(this.decorators, value);
   }
+  getDecorators(): TreeDecorator[] { return [...this.decorators.values()]; }
+  getDecorator(name: string): TreeDecorator | undefined { return this.decorators.get(name); }
 
   registerAttributeHandler(value: AttributeHandler): void {
     this.register(this.attributeHandlers, value);

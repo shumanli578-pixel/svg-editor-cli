@@ -9,6 +9,7 @@ import { Rect } from "../plugins/builtin/Rect.ts";
 import { Text } from "../plugins/builtin/Text.ts";
 import { BoxAttributeHandler, BoxShapeProvider } from "../plugins/box.ts";
 import type { SvgDocument } from "../model/SvgDocument.ts";
+import { BoxTypeDecorator, ModifiedStarDecorator } from "../plugins/decorators.ts";
 
 export type CommandHandlers = Record<
   string,
@@ -128,6 +129,8 @@ export function createDefaultSetup(
   }
   registry.registerShape(BoxShapeProvider);
   registry.registerAttributeHandler(new BoxAttributeHandler(getDocument));
+  registry.registerDecorator(new BoxTypeDecorator());
+  registry.registerDecorator(new ModifiedStarDecorator());
 
   for (const [name, command] of Object.entries(handlers)) {
     registry.registerCommand({

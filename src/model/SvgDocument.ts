@@ -5,6 +5,7 @@ import { Line } from "../plugins/builtin/Line.ts";
 import { Rect } from "../plugins/builtin/Rect.ts";
 import { Shape } from "./Shape.ts";
 import { Text } from "../plugins/builtin/Text.ts";
+import type { TreeDecorator } from "../core/ExtensionPoints.ts";
 
 export interface ShapeLocation {
   readonly shape: Shape;
@@ -101,11 +102,11 @@ export class SvgDocument {
 
   shapesInDocumentOrder(): readonly Shape[] { return this.allShapes(); }
 
-  treeLines(rootId?: string): string[] {
+  treeLines(rootId?: string, decorators: readonly TreeDecorator[] = []): string[] {
     if (rootId !== undefined) {
       const root = this.resolve(rootId);
       if (!root) throw new Error(`no such shape: ${rootId}`);
-      const lines = [this.describe(root)];
+      const lines = [`${this.describe(root)}${this.decoratorSuffix(root, decorators)}`];
       if (root instanceof Group) {
         root.children.forEach((child, index) => this.appendTree(lines, child, "", index === root.children.length - 1));
       }
@@ -113,7 +114,7 @@ export class SvgDocument {
     }
 
     const lines = [`svg (${this.canvasWidth}x${this.canvasHeight})`];
-    this.rootChildren.forEach((shape, index) => this.appendTree(lines, shape, "", index === this.rootChildren.length - 1));
+    this.rootChildren.forEach((shape, index) => this.appendTree(lines, shape, "", index === this.rootChildren.length - 1, decorators));
     return lines;
   }
 
@@ -172,13 +173,17 @@ export class SvgDocument {
     return Math.max(0, Math.min(index, length));
   }
 
-  private appendTree(lines: string[], shape: Shape, prefix: string, isLast: boolean): void {
+  private appendTree(lines: string[], shape: Shape, prefix: string, isLast: boolean, decorators: readonly TreeDecorator[] = []): void {
     const branch = isLast ? "└── " : "├── ";
-    lines.push(`${prefix}${branch}${this.describe(shape)}`);
+    lines.push(`${prefix}${branch}${this.describe(shape)}${this.decoratorSuffix(shape, decorators)}`);
     if (shape instanceof Group) {
       const nextPrefix = prefix + (isLast ? "    " : "│   ");
-      shape.children.forEach((child, index) => this.appendTree(lines, child, nextPrefix, index === shape.children.length - 1));
+      shape.children.forEach((child, index) => this.appendTree(lines, child, nextPrefix, index === shape.children.length - 1, decorators));
     }
+  }
+
+  private decoratorSuffix(shape: Shape, decorators: readonly TreeDecorator[]): string {
+    return decorators.map((decorator) => decorator.decorate(shape)).join("");
   }
 
   private describe(shape: Shape): string {
