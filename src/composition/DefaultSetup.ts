@@ -7,7 +7,8 @@ import { Group } from "../plugins/builtin/Group.ts";
 import { Line } from "../plugins/builtin/Line.ts";
 import { Rect } from "../plugins/builtin/Rect.ts";
 import { Text } from "../plugins/builtin/Text.ts";
-import { BoxShapeProvider } from "../plugins/box.ts";
+import { BoxAttributeHandler, BoxShapeProvider } from "../plugins/box.ts";
+import type { SvgDocument } from "../model/SvgDocument.ts";
 
 export type CommandHandlers = Record<
   string,
@@ -118,6 +119,7 @@ const shapeProviders: ShapeProvider[] = [
 
 export function createDefaultSetup(
   handlers: CommandHandlers,
+  getDocument: () => SvgDocument | null = () => null,
 ): { registry: PluginRegistry } {
   const registry = new PluginRegistry();
 
@@ -125,6 +127,7 @@ export function createDefaultSetup(
     registry.registerShape(provider);
   }
   registry.registerShape(BoxShapeProvider);
+  registry.registerAttributeHandler(new BoxAttributeHandler(getDocument));
 
   for (const [name, command] of Object.entries(handlers)) {
     registry.registerCommand({

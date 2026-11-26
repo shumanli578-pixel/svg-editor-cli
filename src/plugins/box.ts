@@ -3,6 +3,9 @@ import type { ShapeProvider } from "../core/ExtensionPoints.ts";
 import { Group } from "./builtin/Group.ts";
 import { Rect } from "./builtin/Rect.ts";
 import { Text } from "./builtin/Text.ts";
+import type { AttributeHandler } from "../core/ExtensionPoints.ts";
+import type { SvgDocument } from "../model/SvgDocument.ts";
+import { SetCommand } from "./builtin/SetCommand.ts";
 
 export class Box extends Group {
   constructor(id: string, x: number, y: number, width: number, height: number, label: string) {
@@ -14,6 +17,26 @@ export class Box extends Group {
   override toSvg(indent = ""): string {
     const children = this.children.map((child) => child.toSvg(`${indent}  `)).join("\n");
     return `${indent}<g id="${Shape.escapeXml(this.id)}" data-kind="box">\n${children}\n${indent}</g>`;
+  }
+}
+
+export class BoxAttributeHandler implements AttributeHandler {
+  readonly name = "box-attributes";
+
+  constructor(private readonly getDocument: () => SvgDocument | null) {}
+
+  handles(shapeId: string, attribute: string): boolean {
+    const box = this.getDocument()?.resolve(shapeId);
+    return box instanceof Box && (attribute === "fill" || attribute === "label");
+  }
+
+  apply(shapeId: string, attribute: string, value: string) {
+    const document = this.getDocument();
+    const box = document?.resolve(shapeId);
+    if (!(box instanceof Box)) throw new Error(`not a box: ${shapeId}`);
+    if (attribute === "fill") return new SetCommand(document!, `${shapeId}-rect`, "fill", value);
+    if (attribute === "label") return new SetCommand(document!, `${shapeId}-label`, "text", value);
+    throw new Error(`unsupported box attribute: ${attribute}`);
   }
 }
 

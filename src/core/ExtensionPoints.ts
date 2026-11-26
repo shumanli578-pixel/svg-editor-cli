@@ -22,6 +22,6 @@ export interface TreeDecorator {
 /** Handles one attribute for a shape type. */
 export interface AttributeHandler {
   readonly name: string;
-  handles(shapeType: string, attribute: string): boolean;
-  apply(...args: unknown[]): unknown;
+  handles(shapeId: string, attribute: string): boolean;
+  apply(shapeId: string, attribute: string, value: string): import("../commands/Command.ts").Command;
 }

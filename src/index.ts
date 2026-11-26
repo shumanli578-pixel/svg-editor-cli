@@ -49,7 +49,7 @@ const setup = createDefaultSetup({
   help: { description: "show all commands", execute: helpCommand },
   stats: statsCommand,
   dir: dirCommand,
-});
+}, () => document);
 
 const shapeFactory = new ShapeFactory(setup.registry);
 const svgIO = new SvgIO(shapeFactory);
@@ -244,6 +244,13 @@ function setAttribute(args: string[]): void {
   const current = requireDocument();
   const shape = current.document.resolve(id);
   if (!shape) throw new Error(`no such shape: ${id}`);
+
+  const handler = setup.registry.getAttributeHandlers().find((candidate) => candidate.handles(id, attribute));
+  if (handler) {
+    runEdit(current.manager, handler.apply(id, attribute, value));
+    console.log(`${shape.kind}#${id} updated: ${attribute}=${JSON.stringify(value)}`);
+    return;
+  }
 
   runEdit(current.manager, new SetCommand(current.document, id, attribute, value));
   console.log(`${shape.kind}#${id} updated: ${attribute}=${JSON.stringify(value)}`);

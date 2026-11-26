@@ -33,6 +33,10 @@ export class PluginRegistry {
     this.register(this.attributeHandlers, value);
   }
 
+  getAttributeHandlers(): AttributeHandler[] {
+    return [...this.attributeHandlers.values()];
+  }
+
   private register<T extends { readonly name: string }>(registry: Map<string, T>, value: T): void {
     if (registry.has(value.name)) {
       throw new Error(`duplicate registration: ${value.name}`);
